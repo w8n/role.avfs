@@ -1,0 +1,12 @@
+---
+
+- name: install avfs for Debian/Ubuntu
+  apt: name=avfs
+  sudo: yes
+
+- name: fix /dev/fuse permissions
+  shell: |
+    timeout 1s mountavfs
+    chgrp fuse /dev/fuse
+    chmod g+rw /dev/fuse
+  sudo: yes

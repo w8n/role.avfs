@@ -1,0 +1,44 @@
+---
+- set_fact:
+    avfs_src: avfs-{{avfs_version}}
+    avfs_url: http://sourceforge.net/projects/avf/files/avfs/{{avfs_version}}/avfs-{{avfs_version}}.tar.bz2
+    avfs_package: avfs-{{avfs_version}}-1.{{ansible_architecture}}.rpm
+    avfs_disthome: /root/rpmbuild/RPMS/{{ansible_architecture}}
+
+- name: install SELinux Python bindings required by Ansible "copy" module
+  yum: name=libselinux-python
+  sudo: yes
+
+- name: copy pre-built avfs package
+  copy: src={{item}}
+        dest={{avfs_disthome}}/
+        owner=root group=root mode=0644
+  sudo: yes
+  with_fileglob:
+    - el6/{{avfs_package}}
+
+- name: install AVFS dependencies and building tools
+  yum: name={{item}}
+  with_items: [ fuse, fuse-devel, gcc ]
+  sudo: yes
+
+- name: build AVFS
+  shell: |
+    wget -O- {{avfs_url}} | tar -xj && \
+    pushd {{avfs_src}} && \
+    ./configure && \
+    make && \
+    checkinstall --install=no --default --nodoc make install && \
+    popd && \
+    rm -rf {{avfs_src}}
+  args:
+    chdir: /tmp
+    creates: "{{avfs_disthome}}/{{avfs_package}}"
+  sudo: yes
+
+- name: install AVFS
+  shell: rpm -i --nodeps {{avfs_disthome}}/{{avfs_package}}
+  register: result
+  failed_when: result.rc != 0 and not "already installed" in result.stderr
+  changed_when: not "already installed" in result.stderr
+  sudo: yes

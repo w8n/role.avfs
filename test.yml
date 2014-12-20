@@ -1,0 +1,30 @@
+---
+- hosts: all
+  roles:
+    - { role: "." }
+
+  tasks:
+
+  - name: allow user to mount AVFS
+    user: name=vagrant group={{avfs_group}}
+    sudo: yes
+
+  - name: test AVFS mounting
+    shell: sudo -u vagrant mountavfs && sleep 3s
+    sudo: yes
+    register: result
+    changed_when: False
+    failed_when: not "Mounting AVFS" in result.stdout
+
+  - name: test .avfs presence
+    shell: sudo -u vagrant stat /home/vagrant/.avfs
+    sudo: yes
+    register: result
+    changed_when: False
+
+  - name: test AVFS unmounting
+    shell: sudo -u vagrant umountavfs && sleep 3s
+    sudo: yes
+    register: result
+    changed_when: False
+    failed_when: not "unMounting AVFS" in result.stdout
